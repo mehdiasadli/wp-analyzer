@@ -1,5 +1,7 @@
 export const YOU = import.meta.env.VITE_YOU || '';
 export const GROUP_NAME = import.meta.env.VITE_GROUP_NAME || '';
+export const AI_NAME = import.meta.env.VITE_AI_NAME || '';
+
 export const DEFAULT_ACTIVITY_REPORT_CONFIG = {
   removeUsers: [
     'Ramal Yusifov',

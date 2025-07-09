@@ -1,4 +1,4 @@
-import { GROUP_NAME } from './constants';
+import { AI_NAME, GROUP_NAME } from './constants';
 import { type ContentInfo, parseContent } from './content-parser';
 import { parseChatMessages } from './message-parser';
 import { fromFileToString } from './from-file-to-string';
@@ -28,6 +28,7 @@ function processChatText(text: string): Message[] {
       message: parseContent(msg),
     }))
     .filter((m) => m.author !== GROUP_NAME)
+    .filter((m) => m.author !== AI_NAME)
     .filter((m) => m.message !== null)
     .filter((m) => {
       if (!m.message) return false;
