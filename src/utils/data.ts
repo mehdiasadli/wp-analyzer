@@ -1,8 +1,5 @@
-import fs from 'fs';
-import path from 'path';
 import { GROUP_NAME } from './constants';
 import { type ContentInfo, parseContent } from './content-parser';
-import { getChatFile } from './get-chat-file';
 import { parseChatMessages } from './message-parser';
 import { fromFileToString } from './from-file-to-string';
 
@@ -31,46 +28,6 @@ export async function getMessages(chatFile: File): Promise<Message[]> {
 
       return true;
     });
-
-  return parsedMessages as Message[];
-}
-
-export async function getData(name: string) {
-  const dataDir = './data';
-  const jsonFilePath = path.join(dataDir, `${name}.json`);
-
-  // Check if JSON file exists
-  if (fs.existsSync(jsonFilePath)) {
-    try {
-      console.log(`Reading data from JSON file: ${jsonFilePath}`);
-      const jsonData = fs.readFileSync(jsonFilePath, 'utf-8');
-      const messages = JSON.parse(jsonData);
-
-      // Convert timestamp strings back to Date objects
-      return messages.map((msg: Message) => ({
-        ...msg,
-        timestamp: new Date(msg.timestamp),
-      })) as Message[];
-    } catch (error) {
-      console.error(`Error reading JSON file: ${error}`);
-      console.log('Falling back to chat file parsing...');
-    }
-  }
-
-  // Fallback to original chat file parsing if JSON doesn't exist or fails
-  console.log(`Reading data from chat file: ${name}`);
-  const chatContent = await getChatFile(name);
-  const messages = parseChatMessages(chatContent).filter((msg) => msg.author !== GROUP_NAME);
-  const parsedMessages = messages
-    .map((msg) => ({
-      author: msg.author,
-      timestamp: msg.timestamp,
-      message: parseContent(msg),
-    }))
-    .filter((m) => m.message !== null);
-
-  // Write to JSON file
-  fs.writeFileSync(jsonFilePath, JSON.stringify(parsedMessages, null, 2));
 
   return parsedMessages as Message[];
 }
