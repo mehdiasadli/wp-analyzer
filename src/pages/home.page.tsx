@@ -50,8 +50,8 @@ export function HomePage() {
             WP Activity Analyzer
           </Title>
           <Text size='xl' c='dimmed' maw={600} mx='auto'>
-            Upload your WhatsApp chat export and gain powerful insights into your group activity, user engagement, and
-            communication patterns.
+            Upload your WhatsApp chat export file or paste the chat text directly to gain powerful insights into your
+            group activity, user engagement, and communication patterns.
           </Text>
 
           {messages.length > 0 && (
@@ -68,7 +68,7 @@ export function HomePage() {
           <Stack gap='lg'>
             <Group justify='center'>
               <IconUpload size={32} color='var(--mantine-color-blue-6)' />
-              <Title order={2}>Upload Your Chat</Title>
+              <Title order={2}>Upload or Paste Your Chat</Title>
             </Group>
             <UploadChat />
           </Stack>

@@ -11,6 +11,15 @@ export type Message = {
 
 export async function getMessages(chatFile: File): Promise<Message[]> {
   const text = (await fromFileToString(chatFile)).replace(/\u200e/g, '');
+  return processChatText(text);
+}
+
+export function getMessagesFromText(text: string): Message[] {
+  const cleanedText = text.replace(/\u200e/g, '');
+  return processChatText(cleanedText);
+}
+
+function processChatText(text: string): Message[] {
   const messages = parseChatMessages(text);
   const parsedMessages = messages
     .map((msg) => ({
