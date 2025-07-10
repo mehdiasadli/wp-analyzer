@@ -522,7 +522,7 @@ class Stats {
 
     const sortedMessages = messages.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
     const dates = sortedMessages.map((msg) => msg.timestamp.toDateString());
-    const uniqueDates = [...new Set(dates)].sort();
+    const uniqueDates = [...new Set(dates)].sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
 
     let longestStreak = 0;
     let currentStreak = 0;
