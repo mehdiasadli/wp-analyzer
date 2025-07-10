@@ -64,6 +64,7 @@ export function UploadChat() {
         setMessages([]);
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [setChatFile, setPastedText, setMessages]
   );
 
