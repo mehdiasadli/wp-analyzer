@@ -55,6 +55,11 @@ export type UserStats = {
   currentStreak: number;
   mostActiveHour: number;
   mostActiveDay: string;
+  hourlyActivity: Record<number, number>;
+  dailyActivity: Record<string, number>; // days of week
+  dailyActivityByDate: Record<string, number>; // actual dates
+  monthlyActivity: Record<string, number>;
+  yearlyActivity: Record<string, number>;
   callStats: {
     total: number;
     voice: number;
@@ -88,8 +93,10 @@ export type OverallStats = {
   messageTypeDistribution: Record<ContentType, { count: number; percentage: number }>;
   statusDistribution: Record<MessageStatus, { count: number; percentage: number }>;
   hourlyActivity: Record<number, number>;
-  dailyActivity: Record<string, number>;
+  dailyActivity: Record<string, number>; // days of week
+  dailyActivityByDate: Record<string, number>; // actual dates
   monthlyActivity: Record<string, number>;
+  yearlyActivity: Record<string, number>;
   callStats: {
     total: number;
     voice: number;
@@ -345,30 +352,55 @@ class Stats {
     const { longestStreak, currentStreak } = this.calculateStreaks(userMessages);
 
     // Most active hour and day
-    const hourlyCounts: Record<number, number> = {};
-    const dailyCounts: Record<string, number> = {};
+    const hourlyActivity: Record<number, number> = {};
+    const dailyActivity: Record<string, number> = {};
 
     userMessages.forEach((msg) => {
       const hour = msg.timestamp.getHours();
       const day = msg.timestamp.toLocaleDateString('en-US', { weekday: 'long' });
-      hourlyCounts[hour] = (hourlyCounts[hour] || 0) + 1;
-      dailyCounts[day] = (dailyCounts[day] || 0) + 1;
+      hourlyActivity[hour] = (hourlyActivity[hour] || 0) + 1;
+      dailyActivity[day] = (dailyActivity[day] || 0) + 1;
     });
 
     const mostActiveHour =
-      Object.entries(hourlyCounts).reduce((a, b) => {
-        const h1 = hourlyCounts[Number(a[0])] || 0;
-        const h2 = hourlyCounts[Number(b[0])] || 0;
+      Object.entries(hourlyActivity).reduce((a, b) => {
+        const h1 = hourlyActivity[Number(a[0])] || 0;
+        const h2 = hourlyActivity[Number(b[0])] || 0;
 
         return h1 > h2 ? a : b;
       })[0] || '0';
 
     const mostActiveDay =
-      Object.entries(dailyCounts).reduce((a, b) => {
-        const d1 = dailyCounts[a[0]] || 0;
-        const d2 = dailyCounts[b[0]] || 0;
+      Object.entries(dailyActivity).reduce((a, b) => {
+        const d1 = dailyActivity[a[0]] || 0;
+        const d2 = dailyActivity[b[0]] || 0;
         return d1 > d2 ? a : b;
       })[0] || 'Monday';
+
+    // Daily activity by date
+    const dailyActivityByDate: Record<string, number> = {};
+    userMessages.forEach((msg) => {
+      const dayDate = msg.timestamp.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'numeric',
+        day: 'numeric',
+      });
+      dailyActivityByDate[dayDate] = (dailyActivityByDate[dayDate] || 0) + 1;
+    });
+
+    // Monthly activity
+    const monthlyActivity: Record<string, number> = {};
+    userMessages.forEach((msg) => {
+      const month = msg.timestamp.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+      monthlyActivity[month] = (monthlyActivity[month] || 0) + 1;
+    });
+
+    // Yearly activity
+    const yearlyActivity: Record<string, number> = {};
+    userMessages.forEach((msg) => {
+      const year = msg.timestamp.toLocaleDateString('en-US', { year: 'numeric' });
+      yearlyActivity[year] = (yearlyActivity[year] || 0) + 1;
+    });
 
     const activityConfig = config.activityScoreConfig || this.defaultActivityConfig;
     const activityScore = this.calculateActivityScore(userMessages, activityConfig);
@@ -389,6 +421,11 @@ class Stats {
       currentStreak,
       mostActiveHour: parseInt(mostActiveHour),
       mostActiveDay,
+      hourlyActivity,
+      dailyActivity,
+      dailyActivityByDate,
+      monthlyActivity,
+      yearlyActivity,
       callStats,
       pollStats,
       contentStats: {
@@ -543,7 +580,9 @@ class Stats {
       // Activity patterns
       const hourlyActivity: Record<number, number> = {};
       const dailyActivity: Record<string, number> = {};
+      const dailyActivityByDate: Record<string, number> = {};
       const monthlyActivity: Record<string, number> = {};
+      const yearlyActivity: Record<string, number> = {};
 
       // Call and poll stats
       const callStats = { total: 0, voice: 0, video: 0, missed: 0, totalDuration: 0 };
@@ -565,11 +604,19 @@ class Stats {
 
           const hour = msg.timestamp.getHours();
           const day = msg.timestamp.toLocaleDateString('en-US', { weekday: 'long' });
+          const dayDate = msg.timestamp.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'numeric',
+            day: 'numeric',
+          });
           const month = msg.timestamp.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+          const year = msg.timestamp.toLocaleDateString('en-US', { year: 'numeric' });
 
           hourlyActivity[hour] = (hourlyActivity[hour] || 0) + 1;
           dailyActivity[day] = (dailyActivity[day] || 0) + 1;
+          dailyActivityByDate[dayDate] = (dailyActivityByDate[dayDate] || 0) + 1;
           monthlyActivity[month] = (monthlyActivity[month] || 0) + 1;
+          yearlyActivity[year] = (yearlyActivity[year] || 0) + 1;
 
           if (msg.message.type === 'call' && msg.message.call) {
             callStats.total++;
@@ -707,7 +754,9 @@ class Stats {
         statusDistribution,
         hourlyActivity,
         dailyActivity,
+        dailyActivityByDate,
         monthlyActivity,
+        yearlyActivity,
         callStats: {
           ...callStats,
           averageDuration: callStats.total > 0 ? callStats.totalDuration / callStats.total : 0,
@@ -788,25 +837,37 @@ class Stats {
   getActivityHeatmap(config: StatsConfig = { timePeriod: 'total' }): {
     hourly: Record<number, number>;
     daily: Record<string, number>;
+    dailyByDate: Record<string, number>;
+    monthly: Record<string, number>;
+    yearly: Record<string, number>;
     combined: Record<string, number>; // "day-hour" format
   } {
     const filteredData = this.getFilteredData(config);
 
     const hourly: Record<number, number> = {};
     const daily: Record<string, number> = {};
+    const dailyByDate: Record<string, number> = {};
+    const monthly: Record<string, number> = {};
+    const yearly: Record<string, number> = {};
     const combined: Record<string, number> = {};
 
     filteredData.forEach((msg) => {
       const hour = msg.timestamp.getHours();
       const day = msg.timestamp.toLocaleDateString('en-US', { weekday: 'long' });
+      const dayDate = msg.timestamp.toLocaleDateString('en-US', { year: 'numeric', month: 'numeric', day: 'numeric' });
+      const month = msg.timestamp.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+      const year = msg.timestamp.toLocaleDateString('en-US', { year: 'numeric' });
       const dayHour = `${day}-${hour}`;
 
       hourly[hour] = (hourly[hour] || 0) + 1;
       daily[day] = (daily[day] || 0) + 1;
+      dailyByDate[dayDate] = (dailyByDate[dayDate] || 0) + 1;
+      monthly[month] = (monthly[month] || 0) + 1;
+      yearly[year] = (yearly[year] || 0) + 1;
       combined[dayHour] = (combined[dayHour] || 0) + 1;
     });
 
-    return { hourly, daily, combined };
+    return { hourly, daily, dailyByDate, monthly, yearly, combined };
   }
 
   // Get trending topics (most common words in text messages)
@@ -1039,8 +1100,8 @@ class Stats {
     }
     report += '\n';
 
-    // Daily Activity
-    report += '*== Daily Activity ==*\n';
+    // Daily Activity (Days of Week)
+    report += '*== Daily Activity (Days of Week) ==*\n';
     sortedDailyActivity.forEach(([day, count]) => {
       report += `- ${day} > ${formatNumber(count)}\n`;
     });
@@ -1050,6 +1111,14 @@ class Stats {
     report += '*== Top 5 Active Months ==*\n';
     sortedMonths.forEach(([month, count], index) => {
       report += `${index + 1}. ${month} > ${formatNumber(count)}\n`;
+    });
+    report += '\n';
+
+    // Yearly Activity
+    const sortedYears = Object.entries(stats.yearlyActivity).sort(([, a], [, b]) => b - a);
+    report += '*== Yearly Activity ==*\n';
+    sortedYears.forEach(([year, count]) => {
+      report += `- ${year} > ${formatNumber(count)}\n`;
     });
     report += '\n';
 

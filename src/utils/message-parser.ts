@@ -6,6 +6,10 @@ export interface MessageInfo {
   timestamp: Date;
 }
 
+// Pre-compile regex patterns for better performance
+const TIMESTAMP_PATTERN = /^\[\d{2}\.\d{2}\.\d{2}, \d{2}:\d{2}:\d{2}\]/;
+const MESSAGE_REGEX = /^\[(?<date>\d{2}\.\d{2}\.\d{2}, \d{2}:\d{2}:\d{2})\] (?<author>[^:]+): (?<content>[\s\S]*)$/;
+
 /**
  * Separates the entire chat content into individual messages.
  * Handles multi-line messages by looking for the timestamp pattern at the start of each message.
@@ -14,16 +18,13 @@ export interface MessageInfo {
  * @returns Array of individual message strings
  */
 export function getSeparateMessages(chatContent: string): string[] {
-  // Regex to match the timestamp pattern at the beginning of a line
-  const timestampPattern = /^\[\d{2}\.\d{2}\.\d{2}, \d{2}:\d{2}:\d{2}\]/;
-
   const lines = chatContent.split('\n');
   const messages: string[] = [];
   let currentMessage = '';
 
   for (const line of lines) {
     // If this line starts with a timestamp, it's a new message
-    if (timestampPattern.test(line.trim())) {
+    if (TIMESTAMP_PATTERN.test(line.trim())) {
       // Save the previous message if it exists
       if (currentMessage.trim()) {
         messages.push(currentMessage.trim());
@@ -54,11 +55,7 @@ export function getSeparateMessages(chatContent: string): string[] {
  * @throws Error if the message format is invalid
  */
 export function getMessageInfo(message: string): MessageInfo {
-  // Regex to match the complete message format
-  // This handles multi-line content by using [\s\S]* instead of .*
-  const messageRegex = /^\[(?<date>\d{2}\.\d{2}\.\d{2}, \d{2}:\d{2}:\d{2})\] (?<author>[^:]+): (?<content>[\s\S]*)$/;
-
-  const match = message.match(messageRegex);
+  const match = message.match(MESSAGE_REGEX);
 
   if (!match || !match.groups) {
     throw new Error(`Invalid message format: ${message.substring(0, 100)}...`);
@@ -125,12 +122,19 @@ export function parseChatMessages(chatContent: string): MessageInfo[] {
   const messages = getSeparateMessages(chatContent);
   const messageInfos: MessageInfo[] = [];
 
-  for (const message of messages) {
-    try {
-      const info = getMessageInfo(message);
-      messageInfos.push(info);
-    } catch {
-      // continue processing other messages
+  // Process messages in batches for better performance
+  const batchSize = 500;
+
+  for (let i = 0; i < messages.length; i += batchSize) {
+    const batch = messages.slice(i, i + batchSize);
+
+    for (const message of batch) {
+      try {
+        const info = getMessageInfo(message);
+        messageInfos.push(info);
+      } catch {
+        // continue processing other messages
+      }
     }
   }
 

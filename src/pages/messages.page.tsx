@@ -1,69 +1,107 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { Container, Stack, Title, Group, Button, Text, Alert } from '@mantine/core';
 import { IconArrowLeft, IconDatabase } from '@tabler/icons-react';
 import { Link } from 'react-router-dom';
 import { useData } from '../stores/data.store';
-import {
-  MessagesFilters,
-  MessagesTable,
-  MessagesPagination,
-  type SortField,
-  type SortDirection,
-} from '../components/messages';
-import { DateFilter } from '../components/date-filter';
 import { useFilteredMessages } from '../hooks/useFilteredMessages';
-import type { ContentType, MessageStatus } from '../utils/content-parser';
+import { DateFilter } from '../components/date-filter';
+import { MessagesFilters } from '../components/messages/MessagesFilters';
+import { MessagesTable } from '../components/messages/MessagesTable';
+import { MessagesPagination } from '../components/messages/MessagesPagination';
 import type { Message } from '../utils/data';
+import type { ContentType, MessageStatus } from '../utils/content-parser';
+
+// Debounce function for search
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+}
 
 const ITEMS_PER_PAGE = 50;
+
+type SortField = 'timestamp' | 'author' | 'content';
+type SortDirection = 'asc' | 'desc';
 
 export function MessagesPage() {
   const { messages } = useData();
   const filteredMessages = useFilteredMessages();
 
-  // Filter states
+  // State
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAuthor, setSelectedAuthor] = useState('');
   const [selectedType, setSelectedType] = useState<ContentType | ''>('');
   const [selectedStatus, setSelectedStatus] = useState<MessageStatus | ''>('');
-
-  // Sorting states
   const [sortField, setSortField] = useState<SortField>('timestamp');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
-
-  // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(ITEMS_PER_PAGE);
 
-  // Get unique values for filters
-  const authors = useMemo(() => {
+  // Debounce search term to prevent excessive filtering
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+
+  // Cache for unique values
+  const uniqueValuesCache = useRef<{
+    authors: string[];
+    contentTypes: ContentType[];
+    statuses: MessageStatus[];
+  } | null>(null);
+
+  // Get unique values for filters with caching
+  const { authors, contentTypes, statuses } = useMemo(() => {
+    // Check if we can use cached values
+    if (uniqueValuesCache.current && uniqueValuesCache.current.authors.length > 0) {
+      return uniqueValuesCache.current;
+    }
+
     const uniqueAuthors = new Set(filteredMessages.map((msg: Message) => msg.author));
-    return Array.from(uniqueAuthors).sort();
-  }, [filteredMessages]);
-
-  const contentTypes = useMemo(() => {
     const uniqueTypes = new Set(filteredMessages.map((msg: Message) => msg.message.type));
-    return Array.from(uniqueTypes).sort() as ContentType[];
-  }, [filteredMessages]);
-
-  const statuses = useMemo(() => {
     const uniqueStatuses = new Set(filteredMessages.map((msg: Message) => msg.message.status));
-    return Array.from(uniqueStatuses).sort() as MessageStatus[];
+
+    const result = {
+      authors: Array.from(uniqueAuthors).sort(),
+      contentTypes: Array.from(uniqueTypes).sort() as ContentType[],
+      statuses: Array.from(uniqueStatuses).sort() as MessageStatus[],
+    };
+
+    // Cache the result
+    uniqueValuesCache.current = result;
+    return result;
   }, [filteredMessages]);
 
-  // Filter and sort messages
+  // Filter and sort messages with optimizations
   const filteredAndSortedMessages = useMemo(() => {
+    // Early return if no filters applied
+    if (!debouncedSearchTerm && !selectedAuthor && !selectedType && !selectedStatus) {
+      return filteredMessages;
+    }
+
     const filtered = filteredMessages.filter((message: Message) => {
-      const matchesSearch =
-        !searchTerm ||
-        message.author.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (message.message.content && message.message.content.toLowerCase().includes(searchTerm.toLowerCase()));
+      // Optimize search by checking most common cases first
+      if (selectedAuthor && message.author !== selectedAuthor) return false;
+      if (selectedType && message.message.type !== selectedType) return false;
+      if (selectedStatus && message.message.status !== selectedStatus) return false;
 
-      const matchesAuthor = !selectedAuthor || message.author === selectedAuthor;
-      const matchesType = !selectedType || message.message.type === selectedType;
-      const matchesStatus = !selectedStatus || message.message.status === selectedStatus;
+      // Search term check (most expensive, do last)
+      if (debouncedSearchTerm) {
+        const searchLower = debouncedSearchTerm.toLowerCase();
+        const authorMatch = message.author.toLowerCase().includes(searchLower);
+        const contentMatch = message.message.content && message.message.content.toLowerCase().includes(searchLower);
 
-      return matchesSearch && matchesAuthor && matchesType && matchesStatus;
+        if (!authorMatch && !contentMatch) return false;
+      }
+
+      return true;
     });
 
     // Sort messages
@@ -73,15 +111,14 @@ export function MessagesPage() {
 
       switch (sortField) {
         case 'timestamp':
-          aValue = a.timestamp;
-          bValue = b.timestamp;
+          aValue = a.timestamp.getTime();
+          bValue = b.timestamp.getTime();
           break;
         case 'author':
           aValue = a.author.toLowerCase();
           bValue = b.author.toLowerCase();
           break;
         case 'content':
-          // Sort by content length instead of alphabetical
           aValue = (a.message.content || '').length;
           bValue = (b.message.content || '').length;
           break;
@@ -93,7 +130,7 @@ export function MessagesPage() {
       if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
       return 0;
     });
-  }, [filteredMessages, searchTerm, selectedAuthor, selectedType, selectedStatus, sortField, sortDirection]);
+  }, [filteredMessages, debouncedSearchTerm, selectedAuthor, selectedType, selectedStatus, sortField, sortDirection]);
 
   // Paginate messages
   const paginatedMessages = useMemo(() => {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Stats } from '../utils/stats';
 import { DEFAULT_ACTIVITY_REPORT_CONFIG } from '../utils/constants';
 import type { OverallStats } from '../utils/stats';
@@ -18,21 +18,52 @@ interface UseStatsReturn {
   refreshStats: () => void;
 }
 
+// Debounce function to prevent excessive computations
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
 export function useStats(): UseStatsReturn {
   const filteredMessages = useFilteredMessages();
   const [statsData, setStatsData] = useState<StatsData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Debounce filtered messages to prevent excessive recalculations
+  const debouncedMessages = useDebounce(filteredMessages, 300);
+
+  // Cache for stats instance
+  const statsInstanceRef = useRef<Stats | null>(null);
+  const lastMessagesRef = useRef<typeof filteredMessages>(null);
+
   // Memoize the Stats instance to prevent recreation on every render
   const statsInstance = useMemo(() => {
-    if (!filteredMessages || filteredMessages.length === 0) return null;
-    return new Stats(filteredMessages);
-  }, [filteredMessages]);
+    if (!debouncedMessages || debouncedMessages.length === 0) return null;
+
+    // Only create new instance if messages actually changed
+    if (lastMessagesRef.current !== debouncedMessages) {
+      statsInstanceRef.current = new Stats(debouncedMessages);
+      lastMessagesRef.current = debouncedMessages;
+    }
+
+    return statsInstanceRef.current;
+  }, [debouncedMessages]);
 
   // Compute stats using main thread with optimizations
   const computeStats = useCallback(async () => {
-    if (!filteredMessages || filteredMessages.length === 0) {
+    if (!debouncedMessages || debouncedMessages.length === 0) {
       setStatsData(null);
       setError(null);
       return;
@@ -47,10 +78,25 @@ export function useStats(): UseStatsReturn {
     setError(null);
 
     try {
-      // Use a small delay to allow UI to render first
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      // Use requestIdleCallback for better performance on mobile
+      const computeInIdle = () => {
+        return new Promise<void>((resolve) => {
+          if ('requestIdleCallback' in window) {
+            requestIdleCallback(() => {
+              console.log(`Computing statistics for ${debouncedMessages.length.toLocaleString()} messages...`);
+              resolve();
+            });
+          } else {
+            // Fallback for browsers without requestIdleCallback
+            setTimeout(() => {
+              console.log(`Computing statistics for ${debouncedMessages.length.toLocaleString()} messages...`);
+              resolve();
+            }, 50);
+          }
+        });
+      };
 
-      console.log(`Computing statistics for ${filteredMessages.length.toLocaleString()} messages...`);
+      await computeInIdle();
 
       const [overallReport, rankingsReport, categoriesReport, overallStats] = await Promise.all([
         // Run computations in parallel for better performance
@@ -86,7 +132,7 @@ export function useStats(): UseStatsReturn {
     } finally {
       setIsLoading(false);
     }
-  }, [filteredMessages, statsInstance]);
+  }, [debouncedMessages, statsInstance]);
 
   // Refresh stats function
   const refreshStats = useCallback(() => {

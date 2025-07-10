@@ -33,9 +33,10 @@ export type ContentInfo = {
   mentions: string[];
 };
 
-const systemRegexes = [/^.+ (?:deleted|changed|removed|added) .+$/, /^.* left$/, /.+ joined using your invite$/];
+// Pre-compile regex patterns for better performance
+const SYSTEM_REGEXES = [/^.+ (?:deleted|changed|removed|added) .+$/, /^.* left$/, /.+ joined using your invite$/];
 
-const typeRegexes: { type: ContentType; regex: RegExp }[] = [
+const TYPE_REGEXES: { type: ContentType; regex: RegExp }[] = [
   {
     type: 'image',
     regex: /image omitted$/,
@@ -74,13 +75,13 @@ const typeRegexes: { type: ContentType; regex: RegExp }[] = [
   },
 ];
 
-const statusRegexes = {
+const STATUS_REGEXES = {
   deleted: /This message was deleted\.$/,
   deletedAsAdmin: /You deleted this message as admin\.$/,
   edited: / <This message was edited>$/,
 };
 
-const callRegexes = {
+const CALL_REGEXES = {
   missedVideoCall: /Missed video call\. (\d+) (sec|min|hr) • (\d+) joined$/,
   missedVoiceCall: /Missed voice call\. (\d+) (sec|min|hr) • (\d+) joined$/,
   videoCall: /Video call\. (\d+) (sec|min|hr) • (\d+) joined$/,
@@ -90,19 +91,19 @@ const callRegexes = {
   startedVoiceCall: /.+ started a call$/,
 };
 
-const pollRegex = /POLL:\s*\n([^\n]+)(?:\n(?:OPTION: ([^(]+) \((\d+) votes\))\s*)+/g;
-
 export function parseContent(message: MessageInfo): ContentInfo | null {
   const { content } = message;
 
-  if (systemRegexes.some((r) => r.test(content))) {
+  // Early return for system messages
+  if (SYSTEM_REGEXES.some((r) => r.test(content))) {
     return null;
   }
 
   let messageContent: null | string = content;
   let type: ContentType | null = null;
 
-  for (const regex of typeRegexes) {
+  // Check content type first
+  for (const regex of TYPE_REGEXES) {
     if (regex.regex.test(content)) {
       type = regex.type;
       messageContent = null;
@@ -138,24 +139,24 @@ export function parseContent(message: MessageInfo): ContentInfo | null {
 export function getMessageStatus(content: string | null): { status: MessageStatus; content: string | null } {
   if (content === null) return { status: 'active', content: null };
 
-  if (statusRegexes.deleted.test(content)) {
+  if (STATUS_REGEXES.deleted.test(content)) {
     return {
       status: 'deleted',
       content: null,
     };
   }
 
-  if (statusRegexes.deletedAsAdmin.test(content)) {
+  if (STATUS_REGEXES.deletedAsAdmin.test(content)) {
     return {
       status: 'deleted',
       content: null,
     };
   }
 
-  if (statusRegexes.edited.test(content)) {
+  if (STATUS_REGEXES.edited.test(content)) {
     return {
       status: 'edited',
-      content: content.replace(statusRegexes.edited, '').trim(),
+      content: content.replace(STATUS_REGEXES.edited, '').trim(),
     };
   }
 
@@ -178,11 +179,11 @@ export function getCallInfo(content: string | null): CallInfo | null {
   }
 
   // first, check the started calls, since they do not have other information
-  if (callRegexes.startedVideoCall.test(content)) {
+  if (CALL_REGEXES.startedVideoCall.test(content)) {
     return respond({ type: 'video' });
   }
 
-  if (callRegexes.startedVoiceCall.test(content)) {
+  if (CALL_REGEXES.startedVoiceCall.test(content)) {
     return respond({ type: 'voice' });
   }
 
@@ -201,24 +202,23 @@ export function getCallInfo(content: string | null): CallInfo | null {
           : Number(duration) * 3600,
   };
 
-  if (callRegexes.missedVideoCall.test(content)) {
+  if (CALL_REGEXES.missedVideoCall.test(content)) {
     return respond({ type: 'video', missed: true, ...info });
   }
 
-  if (callRegexes.missedVoiceCall.test(content)) {
+  if (CALL_REGEXES.missedVoiceCall.test(content)) {
     return respond({ type: 'voice', missed: true, ...info });
   }
 
-  // check the ended calls
-  if (callRegexes.videoCall.test(content)) {
+  if (CALL_REGEXES.videoCall.test(content)) {
     return respond({ type: 'video', missed: false, ...info });
   }
 
-  if (callRegexes.voiceCall.test(content)) {
+  if (CALL_REGEXES.voiceCall.test(content)) {
     return respond({ type: 'voice', missed: false, ...info });
   }
 
-  if (callRegexes.voiceCall_2.test(content)) {
+  if (CALL_REGEXES.voiceCall_2.test(content)) {
     return respond({ type: 'voice', missed: false, ...info });
   }
 
@@ -228,47 +228,63 @@ export function getCallInfo(content: string | null): CallInfo | null {
 function parsePoll(content: string | null): PollInfo | null {
   if (content === null) return null;
 
-  // Reset regex lastIndex to ensure it starts from the beginning
-  pollRegex.lastIndex = 0;
+  // Debug logging to see the actual content
+  console.log('Parsing poll content:', content);
 
-  const match = pollRegex.exec(content);
-  if (!match || !match[1]) return null;
+  // Check if content starts with POLL:
+  if (!content.startsWith('POLL:')) {
+    console.log('Content does not start with POLL:');
+    return null;
+  }
 
-  const question = match[1].trim();
+  // Extract the question - everything after POLL: until the first OPTION:
+  const questionMatch = content.match(/POLL:\s*\n?([^\n]+)/);
+  if (!questionMatch || !questionMatch[1]) {
+    console.log('Could not extract question');
+    return null;
+  }
+
+  const question = questionMatch[1].trim();
   const options: { option: string; votes: number }[] = [];
 
-  // Extract all options from the content
-  const optionRegex = /‎?OPTION: ([^(]+) \((\d+) votes\)/g;
+  // Extract all options using a more flexible pattern
+  const optionPattern = /OPTION:\s*([^(]+?)\s*\((\d+)\s*votes?\)/g;
   let optionMatch;
 
-  while ((optionMatch = optionRegex.exec(content)) !== null) {
+  while ((optionMatch = optionPattern.exec(content)) !== null) {
     if (optionMatch[1] && optionMatch[2]) {
       options.push({
         option: optionMatch[1].trim(),
-        votes: parseInt(optionMatch[2], 10),
+        votes: parseInt(optionMatch[2]),
       });
     }
   }
 
+  console.log('Parsed poll:', { question, options });
+
+  // Return null if no options found
+  if (options.length === 0) {
+    console.log('No options found in poll');
+    return null;
+  }
+
   return {
-    question,
+    question: question.trim(),
     options,
   };
 }
 
-const mobileNumberRegexes = [/@(994\d{9})/g, /@(79\d{9})/g, /@(48\d{9})/g, /@(39\d{10})/g, /@(36\d{9})/g];
-
 function detectMentions(content: string | null): string[] {
   if (content === null) return [];
 
+  // Simple mention detection - can be enhanced based on your needs
+  const mentionRegex = /@(\w+)/g;
   const mentions: string[] = [];
+  let match;
 
-  for (const regex of mobileNumberRegexes) {
-    const matches = content.match(regex);
-
-    if (matches) {
-      const [, ...numbers] = matches;
-      mentions.push(...numbers.map((n) => n.trim()));
+  while ((match = mentionRegex.exec(content)) !== null) {
+    if (match[1]) {
+      mentions.push(match[1]);
     }
   }
 

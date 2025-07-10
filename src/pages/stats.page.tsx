@@ -101,7 +101,7 @@ export function StatsPage() {
             </Tabs.Panel>
 
             <Tabs.Panel value='charts' pt='lg'>
-              <StatsCharts stats={statsData.overallStats} />
+              <StatsCharts stats={statsData.overallStats} messages={filteredMessages} />
             </Tabs.Panel>
 
             <Tabs.Panel value='reports' pt='lg'>

@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { Container, Stack, Title, Group, Button, Text, Card, Grid, Badge, Paper } from '@mantine/core';
+import { useState, useMemo, useCallback } from 'react';
+import { Container, Stack, Title, Group, Button, Text, Card, Grid, Badge } from '@mantine/core';
 import { IconArrowLeft, IconTrophy, IconUsers, IconActivity } from '@tabler/icons-react';
 import { Link } from 'react-router-dom';
 import { useData } from '../stores/data.store';
@@ -28,16 +28,21 @@ export function RankingPage() {
   const [selectedRankingType, setSelectedRankingType] = useState<RankingType>('message_count');
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Calculate rankings
-  const rankings = useMemo(() => {
-    if (filteredMessages.length === 0) return [];
+  // Memoize stats instance to prevent recreation
+  const statsInstance = useMemo(() => {
+    if (filteredMessages.length === 0) return null;
+    return new Stats(filteredMessages);
+  }, [filteredMessages]);
 
-    const stats = new Stats(filteredMessages);
-    return stats.getRankings({
+  // Calculate rankings with memoization
+  const rankings = useMemo(() => {
+    if (!statsInstance) return [];
+
+    return statsInstance.getRankings({
       rankingType: selectedRankingType,
       timePeriod: 'total',
     });
-  }, [filteredMessages, selectedRankingType]);
+  }, [statsInstance, selectedRankingType]);
 
   // Paginate rankings
   const paginatedRankings = useMemo(() => {
@@ -47,6 +52,27 @@ export function RankingPage() {
   }, [rankings, currentPage]);
 
   const totalPages = Math.ceil(rankings.length / ITEMS_PER_PAGE);
+
+  // Memoize ranking type change handler
+  const handleRankingTypeChange = useCallback((type: RankingType) => {
+    setSelectedRankingType(type);
+    setCurrentPage(1);
+  }, []);
+
+  // Memoize utility functions
+  const getRankingIcon = useCallback((rank: number) => {
+    if (rank === 1) return '🥇';
+    if (rank === 2) return '🥈';
+    if (rank === 3) return '🥉';
+    return `#${rank}`;
+  }, []);
+
+  const getRankingColor = useCallback((rank: number) => {
+    if (rank === 1) return 'gold';
+    if (rank === 2) return 'gray';
+    if (rank === 3) return 'orange';
+    return 'blue';
+  }, []);
 
   if (messages.length === 0) {
     return (
@@ -68,20 +94,6 @@ export function RankingPage() {
       </Container>
     );
   }
-
-  const getRankingIcon = (rank: number) => {
-    if (rank === 1) return '🥇';
-    if (rank === 2) return '🥈';
-    if (rank === 3) return '🥉';
-    return `#${rank}`;
-  };
-
-  const getRankingColor = (rank: number) => {
-    if (rank === 1) return 'gold';
-    if (rank === 2) return 'gray';
-    if (rank === 3) return 'orange';
-    return 'blue';
-  };
 
   return (
     <Container size='xl' py='xl'>
@@ -135,10 +147,7 @@ export function RankingPage() {
                         variant={isSelected ? 'filled' : 'light'}
                         color={type.color}
                         leftSection={<Icon size={16} />}
-                        onClick={() => {
-                          setSelectedRankingType(type.value);
-                          setCurrentPage(1);
-                        }}
+                        onClick={() => handleRankingTypeChange(type.value)}
                       >
                         {type.label}
                       </Button>
@@ -200,68 +209,58 @@ export function RankingPage() {
                             <motion.div
                               initial={{ scale: 0 }}
                               animate={{ scale: 1 }}
-                              transition={{
-                                duration: 0.5,
-                                delay: index * 0.1 + 0.3,
-                                type: 'spring',
-                                stiffness: 200,
-                              }}
+                              transition={{ delay: 0.2 + index * 0.1, type: 'spring' }}
                             >
                               <Badge
                                 size='xl'
                                 variant='filled'
                                 color={getRankingColor(ranking.rank)}
-                                style={{ fontSize: ranking.rank <= 3 ? '1.2rem' : '1rem' }}
+                                style={{ fontSize: '1.2rem', padding: '8px 16px' }}
                               >
                                 {getRankingIcon(ranking.rank)}
                               </Badge>
                             </motion.div>
 
-                            {ranking.change && (
-                              <Badge
-                                variant='light'
-                                color={ranking.change > 0 ? 'green' : ranking.change < 0 ? 'red' : 'gray'}
-                              >
-                                {ranking.change > 0 ? '+' : ''}
-                                {ranking.change}
-                              </Badge>
-                            )}
+                            <Text size='sm' c='dimmed' ta='right'>
+                              {ranking.percentage.toFixed(1)}%
+                            </Text>
                           </Group>
 
-                          {/* User Info */}
-                          <Stack gap='xs' align='center'>
-                            <Text size='lg' fw={600} ta='center'>
+                          {/* Author Name */}
+                          <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.3 + index * 0.1 }}
+                          >
+                            <Text fw={700} size='lg' ta='center'>
                               {ranking.author}
                             </Text>
+                          </motion.div>
 
+                          {/* Value */}
+                          <motion.div
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: 0.4 + index * 0.1, type: 'spring' }}
+                          >
+                            <Text fw={600} size='xl' ta='center' c={getRankingColor(ranking.rank)}>
+                              {ranking.value.toLocaleString()}
+                            </Text>
+                          </motion.div>
+
+                          {/* Change indicator */}
+                          {ranking.change !== undefined && (
                             <motion.div
-                              initial={{ width: 0 }}
-                              animate={{ width: `${ranking.percentage}%` }}
-                              transition={{
-                                duration: 1,
-                                delay: index * 0.1 + 0.5,
-                                ease: 'easeOut',
-                              }}
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              transition={{ delay: 0.5 + index * 0.1 }}
                             >
-                              <Paper
-                                h={8}
-                                radius='xl'
-                                bg='blue'
-                                style={{
-                                  background: `linear-gradient(90deg, var(--mantine-color-blue-6) ${ranking.percentage}%, var(--mantine-color-gray-2) ${ranking.percentage}%)`,
-                                }}
-                              />
+                              <Text size='sm' ta='center' c={ranking.change >= 0 ? 'green' : 'red'} fw={500}>
+                                {ranking.change >= 0 ? '+' : ''}
+                                {ranking.change.toFixed(1)}%
+                              </Text>
                             </motion.div>
-
-                            <Group gap='xs' justify='center'>
-                              <Text size='xl' fw={700} c={getRankingColor(ranking.rank)}>
-                                {ranking.value.toLocaleString()}
-                              </Text>
-                              <Text size='sm' c='dimmed'>
-                                ({ranking.percentage.toFixed(1)}%)
-                              </Text>
-                            </Group>
-                          </Stack>
+                          )}
                         </Stack>
                       </Card>
                     </motion.div>
@@ -272,30 +271,14 @@ export function RankingPage() {
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.6 }}
-              >
-                <Group justify='center' gap='sm'>
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}>
+                <Group justify='center' gap='md'>
                   <Button variant='light' disabled={currentPage === 1} onClick={() => setCurrentPage(currentPage - 1)}>
                     Previous
                   </Button>
-
-                  <Group gap='xs'>
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                      <motion.div key={page} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                        <Button
-                          variant={currentPage === page ? 'filled' : 'light'}
-                          size='sm'
-                          onClick={() => setCurrentPage(page)}
-                        >
-                          {page}
-                        </Button>
-                      </motion.div>
-                    ))}
-                  </Group>
-
+                  <Text size='sm' c='dimmed'>
+                    Page {currentPage} of {totalPages}
+                  </Text>
                   <Button
                     variant='light'
                     disabled={currentPage === totalPages}

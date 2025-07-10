@@ -355,22 +355,24 @@ export function StatsOverview({ stats }: StatsOverviewProps) {
             </Paper>
           </Grid.Col>
 
-          <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
-            <Paper p='md' withBorder radius='md' ta='center'>
-              <Text size='sm' c='dimmed' mb='xs'>
-                Shortest Message
-              </Text>
-              <Text size='sm' fw={600} mb='xs'>
-                {stats.funStats.shortestMessage.author}
-              </Text>
-              <Text size='xs' c='dimmed' lineClamp={2}>
-                {stats.funStats.shortestMessage.content}
-              </Text>
-              <Badge color='green' variant='light' mt='xs'>
-                {formatNumber(stats.funStats.shortestMessage.length)} chars
-              </Badge>
-            </Paper>
-          </Grid.Col>
+          {stats.funStats.pollCreator.polls > 0 && (
+            <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
+              <Paper p='md' withBorder radius='md' ta='center'>
+                <Text size='sm' c='dimmed' mb='xs'>
+                  Poll Master
+                </Text>
+                <Text size='sm' fw={600} mb='xs'>
+                  {stats.funStats.pollCreator.author}
+                </Text>
+                <Text size='xs' c='dimmed' lineClamp={2}>
+                  Most polls created
+                </Text>
+                <Badge color='green' variant='light' mt='xs'>
+                  {formatNumber(stats.funStats.pollCreator.polls)} polls
+                </Badge>
+              </Paper>
+            </Grid.Col>
+          )}
 
           <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
             <Paper p='md' withBorder radius='md' ta='center'>
@@ -389,22 +391,24 @@ export function StatsOverview({ stats }: StatsOverviewProps) {
             </Paper>
           </Grid.Col>
 
-          <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
-            <Paper p='md' withBorder radius='md' ta='center'>
-              <Text size='sm' c='dimmed' mb='xs'>
-                Call Master
-              </Text>
-              <Text size='sm' fw={600} mb='xs'>
-                {stats.funStats.callMaster.author}
-              </Text>
-              <Text size='xs' c='dimmed'>
-                Most calls made
-              </Text>
-              <Badge color='purple' variant='light' mt='xs'>
-                {formatNumber(stats.funStats.callMaster.calls)} calls
-              </Badge>
-            </Paper>
-          </Grid.Col>
+          {stats.funStats.callMaster.calls > 0 && (
+            <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
+              <Paper p='md' withBorder radius='md' ta='center'>
+                <Text size='sm' c='dimmed' mb='xs'>
+                  Call Master
+                </Text>
+                <Text size='sm' fw={600} mb='xs'>
+                  {stats.funStats.callMaster.author}
+                </Text>
+                <Text size='xs' c='dimmed'>
+                  Most calls made
+                </Text>
+                <Badge color='purple' variant='light' mt='xs'>
+                  {formatNumber(stats.funStats.callMaster.calls)} calls
+                </Badge>
+              </Paper>
+            </Grid.Col>
+          )}
         </Grid>
       </Card>
     </Stack>

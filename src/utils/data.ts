@@ -21,23 +21,44 @@ export function getMessagesFromText(text: string): Message[] {
 
 function processChatText(text: string): Message[] {
   const messages = parseChatMessages(text);
-  const parsedMessages = messages
-    .map((msg) => ({
-      author: msg.author,
-      timestamp: msg.timestamp,
-      message: parseContent(msg),
-    }))
-    .filter((m) => m.author !== GROUP_NAME)
-    .filter((m) => m.author !== AI_NAME)
-    .filter((m) => m.message !== null)
-    .filter((m) => {
-      if (!m.message) return false;
-      if (m.message.type !== 'text') return true;
-      if (!m.message.content) return false;
-      if (m.message.content.length <= 0) return false;
 
-      return true;
-    });
+  // Pre-filter messages to reduce processing overhead
+  const filteredMessages = messages.filter((msg) => {
+    // Early return for common exclusions
+    if (msg.author === GROUP_NAME || msg.author === AI_NAME) return false;
 
-  return parsedMessages as Message[];
+    // Basic content validation
+    if (!msg.content || msg.content.length === 0) return false;
+
+    return true;
+  });
+
+  // Process messages in batches for better performance
+  const batchSize = 1000;
+  const parsedMessages: Message[] = [];
+
+  for (let i = 0; i < filteredMessages.length; i += batchSize) {
+    const batch = filteredMessages.slice(i, i + batchSize);
+
+    const batchResults = batch
+      .map((msg) => {
+        try {
+          const parsedContent = parseContent(msg);
+          if (!parsedContent) return null;
+
+          return {
+            author: msg.author,
+            timestamp: msg.timestamp,
+            message: parsedContent,
+          };
+        } catch {
+          return null;
+        }
+      })
+      .filter((m): m is Message => m !== null);
+
+    parsedMessages.push(...batchResults);
+  }
+
+  return parsedMessages;
 }

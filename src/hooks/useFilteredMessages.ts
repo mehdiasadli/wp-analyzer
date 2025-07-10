@@ -1,12 +1,30 @@
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 import { useData } from '../stores/data.store';
 
 export function useFilteredMessages() {
   const { messages, startDate, endDate } = useData();
 
+  // Cache for filtered results
+  const cacheRef = useRef<{
+    messages: typeof messages;
+    startDate: Date | null;
+    endDate: Date | null;
+    result: typeof messages;
+  } | null>(null);
+
   const filteredMessages = useMemo(() => {
     if (messages.length === 0) {
       return messages;
+    }
+
+    // Check if we can use cached result
+    if (
+      cacheRef.current &&
+      cacheRef.current.messages === messages &&
+      cacheRef.current.startDate === startDate &&
+      cacheRef.current.endDate === endDate
+    ) {
+      return cacheRef.current.result;
     }
 
     // Determine effective start and end dates
@@ -27,26 +45,23 @@ export function useFilteredMessages() {
       effectiveEndDate = new Date(endDate);
     }
 
-    console.log('Date filtering debug:', {
-      startDate: startDate?.toISOString(),
-      endDate: endDate?.toISOString(),
-      effectiveStartDate: effectiveStartDate.toISOString(),
-      effectiveEndDate: effectiveEndDate.toISOString(),
-      totalMessages: messages.length,
-      firstMessageDate: messages[0]?.timestamp.toISOString(),
-      lastMessageDate: messages[messages.length - 1]?.timestamp.toISOString(),
-    });
+    // Optimize filtering by pre-calculating timestamps
+    const startTime = effectiveStartDate.getTime();
+    const endTime = effectiveEndDate.getTime();
 
     const filtered = messages.filter((message) => {
-      const messageDate = message.timestamp;
-
-      // Message should be >= start date AND <= end date
-      const isInRange = messageDate >= effectiveStartDate && messageDate <= effectiveEndDate;
-
-      return isInRange;
+      const messageTime = message.timestamp.getTime();
+      return messageTime >= startTime && messageTime <= endTime;
     });
 
-    console.log('Filtered messages count:', filtered.length);
+    // Cache the result
+    cacheRef.current = {
+      messages,
+      startDate,
+      endDate,
+      result: filtered,
+    };
+
     return filtered;
   }, [messages, startDate, endDate]);
 
