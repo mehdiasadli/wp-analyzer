@@ -3,15 +3,19 @@ import { FileInput, Stack, Tabs, Textarea, Button, Group, Text, Alert, Card, Pro
 import { IconUpload, IconFileText, IconCheck } from '@tabler/icons-react';
 import { ChatPreview } from './chat-preview';
 import { ShowStatsButton } from './show-stats-button';
+import { ConfigurationModal } from './ConfigurationModal';
 import { useData } from '../stores/data.store';
 import { getMessagesFromText } from '../utils/data';
 
 export function UploadChat() {
-  const { chatFile, setChatFile, pastedText, setPastedText, setMessages, clearData } = useData();
+  const { chatFile, setChatFile, pastedText, setPastedText, setMessages, clearData, isConfigured, setConfigured } =
+    useData();
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [showConfigModal, setShowConfigModal] = useState(false);
+  const [pendingChatContent, setPendingChatContent] = useState('');
 
   const handleFileUpload = useCallback(
     async (file: File | null) => {
@@ -33,6 +37,15 @@ export function UploadChat() {
 
           const text = await file.text();
           setProgress(50);
+
+          // Check if configuration is needed
+          if (!isConfigured) {
+            setPendingChatContent(text);
+            setShowConfigModal(true);
+            setIsProcessing(false);
+            setProgress(0);
+            return;
+          }
 
           const messages = getMessagesFromText(text);
           setProgress(90);
@@ -65,6 +78,15 @@ export function UploadChat() {
       setError(null);
       setProgress(50);
 
+      // Check if configuration is needed
+      if (!isConfigured) {
+        setPendingChatContent(pastedText);
+        setShowConfigModal(true);
+        setIsProcessing(false);
+        setProgress(0);
+        return;
+      }
+
       const messages = getMessagesFromText(pastedText);
       setProgress(90);
 
@@ -78,7 +100,42 @@ export function UploadChat() {
       setIsProcessing(false);
       setProgress(0);
     }
-  }, [pastedText, setMessages]);
+  }, [pastedText, setMessages, isConfigured]);
+
+  const handleConfigConfirm = useCallback(() => {
+    setConfigured(true);
+    setShowConfigModal(false);
+
+    // Process the pending content
+    if (pendingChatContent) {
+      try {
+        setIsProcessing(true);
+        setError(null);
+        setProgress(50);
+
+        const messages = getMessagesFromText(pendingChatContent);
+        setProgress(90);
+
+        setMessages(messages);
+        setProgress(100);
+        setSuccess(true);
+      } catch (err) {
+        console.error('Processing error:', err);
+        setError("Failed to process the chat content. Please check if it's a valid chat export format.");
+      } finally {
+        setIsProcessing(false);
+        setProgress(0);
+      }
+    }
+  }, [pendingChatContent, setMessages, setConfigured]);
+
+  const handleConfigCancel = useCallback(() => {
+    setShowConfigModal(false);
+    setPendingChatContent('');
+    setIsProcessing(false);
+    setProgress(0);
+    setError(null);
+  }, []);
 
   const handleClear = useCallback(() => {
     clearData();
@@ -113,7 +170,7 @@ export function UploadChat() {
               disabled={isProcessing}
             />
             <Text size='sm' c='dimmed'>
-              Upload a .txt file exported from WhatsApp or Telegram
+              Upload a .txt file exported from WhatsApp
             </Text>
           </Stack>
         </Tabs.Panel>
@@ -196,6 +253,14 @@ export function UploadChat() {
 
       {/* Preview */}
       {chatFile && <ChatPreview chatFile={chatFile} />}
+
+      {/* Configuration Modal */}
+      <ConfigurationModal
+        opened={showConfigModal}
+        onClose={handleConfigCancel}
+        onConfirm={handleConfigConfirm}
+        chatContent={pendingChatContent}
+      />
     </Stack>
   );
 }

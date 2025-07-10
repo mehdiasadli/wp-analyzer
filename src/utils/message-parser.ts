@@ -1,4 +1,4 @@
-import { YOU } from './constants';
+import { useData } from '../stores/data.store';
 
 export interface MessageInfo {
   author: string;
@@ -104,8 +104,11 @@ export function getMessageInfo(message: string): MessageInfo {
 }
 
 function getAuthor(author: string) {
+  const { userNames } = useData.getState();
+
   if (/^you$/i.test(author)) {
-    return YOU;
+    // If user has configured names, use the first one (or keep "you" if none configured)
+    return userNames.length > 0 ? userNames[0] || author : author;
   }
 
   return author;

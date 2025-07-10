@@ -34,7 +34,12 @@ export type ContentInfo = {
 };
 
 // Pre-compile regex patterns for better performance
-const SYSTEM_REGEXES = [/^.+ (?:deleted|changed|removed|added) .+$/, /^.* left$/, /.+ joined using your invite$/];
+const SYSTEM_REGEXES = [
+  /^.+ (?:deleted|changed|removed|added) .+$/,
+  /^.* left$/,
+  /.+ joined using your invite$/,
+  /.+ pinned a message$/,
+];
 
 const TYPE_REGEXES: { type: ContentType; regex: RegExp }[] = [
   {

@@ -1,4 +1,5 @@
-import { AI_NAME, GROUP_NAME } from './constants';
+import { AI_NAME } from './constants';
+import { useData } from '../stores/data.store';
 import { type ContentInfo, parseContent } from './content-parser';
 import { parseChatMessages } from './message-parser';
 import { fromFileToString } from './from-file-to-string';
@@ -24,8 +25,10 @@ function processChatText(text: string): Message[] {
 
   // Pre-filter messages to reduce processing overhead
   const filteredMessages = messages.filter((msg) => {
+    const { groupName } = useData.getState();
+
     // Early return for common exclusions
-    if (msg.author === GROUP_NAME || msg.author === AI_NAME) return false;
+    if (msg.author === groupName || msg.author === AI_NAME) return false;
 
     // Basic content validation
     if (!msg.content || msg.content.length === 0) return false;

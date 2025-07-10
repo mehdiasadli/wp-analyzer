@@ -14,6 +14,13 @@ export const useData = create<{
   setEndDate: (date: Date | null) => void;
   clearDateFilters: () => void;
   clearData: () => void;
+  // User configuration
+  userNames: string[];
+  groupName: string;
+  setUserNames: (names: string[]) => void;
+  setGroupName: (name: string) => void;
+  isConfigured: boolean;
+  setConfigured: (configured: boolean) => void;
 }>((set) => ({
   messages: [],
   setMessages: (messages) => set({ messages }),
@@ -26,5 +33,22 @@ export const useData = create<{
   setStartDate: (date) => set({ startDate: date }),
   setEndDate: (date) => set({ endDate: date }),
   clearDateFilters: () => set({ startDate: null, endDate: null }),
-  clearData: () => set({ messages: [], chatFile: null, pastedText: '', startDate: null, endDate: null }),
+  clearData: () =>
+    set({
+      messages: [],
+      chatFile: null,
+      pastedText: '',
+      startDate: null,
+      endDate: null,
+      userNames: [],
+      groupName: '',
+      isConfigured: false,
+    }),
+  // User configuration
+  userNames: [],
+  groupName: '',
+  setUserNames: (names: string[]) => set({ userNames: names }),
+  setGroupName: (name: string) => set({ groupName: name }),
+  isConfigured: false,
+  setConfigured: (configured: boolean) => set({ isConfigured: configured }),
 }));
