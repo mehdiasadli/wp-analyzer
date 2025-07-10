@@ -1,6 +1,14 @@
 import { useState, useMemo } from 'react';
 import { Card, Grid, Group, Title, Text, Select, Stack, Badge, RingProgress } from '@mantine/core';
-import { IconUser, IconMessage, IconPhone, IconCalendar, IconTrendingUp } from '@tabler/icons-react';
+import {
+  IconUser,
+  IconMessage,
+  IconPhone,
+  IconCalendar,
+  IconTrendingUp,
+  IconChartAreaFilled,
+  IconMessageCircle,
+} from '@tabler/icons-react';
 import { useMantineTheme } from '@mantine/core';
 import type { UserStats } from '../../utils/stats';
 import type { Message } from '../../utils/data';
@@ -155,7 +163,7 @@ export function UserStats({ messages }: UserStatsProps) {
 
           {/* Message Types */}
           <Grid.Col span={{ base: 12, md: 6 }}>
-            <Card withBorder shadow='sm' radius='md' p='lg'>
+            <Card withBorder shadow='sm' radius='md' p='lg' style={{ height: '100%' }}>
               <Group justify='space-between' mb='md'>
                 <Title order={4}>Message Types</Title>
                 <IconMessage size={18} color={theme.colors.violet?.[6] || '#845ef7'} />
@@ -175,83 +183,139 @@ export function UserStats({ messages }: UserStatsProps) {
             </Card>
           </Grid.Col>
 
-          {/* Call Statistics */}
           <Grid.Col span={{ base: 12, md: 6 }}>
-            <Card withBorder shadow='sm' radius='md' p='lg'>
-              <Group justify='space-between' mb='md'>
-                <Title order={4}>Call Statistics</Title>
-                <IconPhone size={18} color={theme.colors.teal?.[6] || '#20c997'} />
-              </Group>
-              <Stack gap='sm'>
-                <Group justify='space-between'>
-                  <Text size='sm' c='dimmed'>
-                    Total Calls
-                  </Text>
-                  <Badge variant='light' color='teal'>
-                    {userStats.callStats.total}
-                  </Badge>
+            <Stack gap='lg'>
+              {/* Call Statistics */}
+              <Card withBorder shadow='sm' radius='md' p='lg'>
+                <Group justify='space-between' mb='md'>
+                  <Title order={4}>Call Statistics</Title>
+                  <IconPhone size={18} color={theme.colors.teal?.[6] || '#20c997'} />
                 </Group>
-                <Group justify='space-between'>
-                  <Text size='sm' c='dimmed'>
-                    Voice Calls
-                  </Text>
-                  <Badge variant='light' color='blue'>
-                    {userStats.callStats.voice}
-                  </Badge>
-                </Group>
-                <Group justify='space-between'>
-                  <Text size='sm' c='dimmed'>
-                    Video Calls
-                  </Text>
-                  <Badge variant='light' color='purple'>
-                    {userStats.callStats.video}
-                  </Badge>
-                </Group>
-                <Group justify='space-between'>
-                  <Text size='sm' c='dimmed'>
-                    Missed Calls
-                  </Text>
-                  <Badge variant='light' color='red'>
-                    {userStats.callStats.missed}
-                  </Badge>
-                </Group>
-                {userStats.callStats.totalDuration > 0 && (
+                <Stack gap='sm'>
                   <Group justify='space-between'>
                     <Text size='sm' c='dimmed'>
-                      Total Duration
+                      Total Calls
                     </Text>
-                    <Badge variant='light' color='orange'>
-                      {Math.round(userStats.callStats.totalDuration / 60)} min
+                    <Badge variant='light' color='teal'>
+                      {userStats.callStats.total}
                     </Badge>
                   </Group>
-                )}
+                  <Group justify='space-between'>
+                    <Text size='sm' c='dimmed'>
+                      Voice Calls
+                    </Text>
+                    <Badge variant='light' color='blue'>
+                      {userStats.callStats.voice}
+                    </Badge>
+                  </Group>
+                  <Group justify='space-between'>
+                    <Text size='sm' c='dimmed'>
+                      Video Calls
+                    </Text>
+                    <Badge variant='light' color='purple'>
+                      {userStats.callStats.video}
+                    </Badge>
+                  </Group>
+                  <Group justify='space-between'>
+                    <Text size='sm' c='dimmed'>
+                      Missed Calls
+                    </Text>
+                    <Badge variant='light' color='red'>
+                      {userStats.callStats.missed}
+                    </Badge>
+                  </Group>
+                  {userStats.callStats.totalDuration > 0 && (
+                    <Group justify='space-between'>
+                      <Text size='sm' c='dimmed'>
+                        Total Duration
+                      </Text>
+                      <Badge variant='light' color='orange'>
+                        {Math.round(userStats.callStats.totalDuration / 60)} min
+                      </Badge>
+                    </Group>
+                  )}
+                </Stack>
+              </Card>
+
+              {/* Poll Statistics */}
+              <Card withBorder shadow='sm' radius='md' p='lg'>
+                <Group justify='space-between' mb='md'>
+                  <Title order={4}>Poll Statistics</Title>
+                  <IconChartAreaFilled size={18} color={theme.colors.teal?.[6] || '#20c997'} />
+                </Group>
+                <Stack gap='sm'>
+                  <Group justify='space-between'>
+                    <Text size='sm' c='dimmed'>
+                      Total Polls
+                    </Text>
+                    <Badge variant='light' color='teal'>
+                      {userStats.pollStats.created}
+                    </Badge>
+                  </Group>
+                  <Group justify='space-between'>
+                    <Text size='sm' c='dimmed'>
+                      Total Votes on created polls
+                    </Text>
+                    <Badge variant='light' color='blue'>
+                      {userStats.pollStats.totalVotes}
+                    </Badge>
+                  </Group>
+                </Stack>
+              </Card>
+
+              {/* Status Information */}
+              <Card withBorder shadow='sm' radius='md' p='lg'>
+                <Group justify='space-between' mb='md'>
+                  <Title order={4}>Status Information</Title>
+                  <IconMessageCircle size={18} color={theme.colors.teal?.[6] || '#20c997'} />
+                </Group>
+                <Stack gap='sm'>
+                  <Group justify='space-between'>
+                    <Text size='sm' c='dimmed'>
+                      Edited messages
+                    </Text>
+                    <Badge variant='light' color='yellow'>
+                      {userStats.statusCounts.edited}
+                    </Badge>
+                  </Group>
+                  <Group justify='space-between'>
+                    <Text size='sm' c='dimmed'>
+                      Deleted messages
+                    </Text>
+                    <Badge variant='light' color='red'>
+                      {userStats.statusCounts.deleted}
+                    </Badge>
+                  </Group>
+                </Stack>
+              </Card>
+            </Stack>
+          </Grid.Col>
+
+          {/* Activity Ring */}
+          <Grid.Col span={{ base: 12, md: 2 }}>
+            <Card withBorder shadow='sm' radius='md' p='lg'>
+              <Stack gap='sm'>
+                <Title ta='center' order={4}>
+                  Activity Level
+                </Title>
+                <Group justify='center'>
+                  <RingProgress
+                    size={120}
+                    thickness={12}
+                    sections={[{ value: activityPercentage, color: theme.colors.blue?.[6] || '#228be6' }]}
+                    label={
+                      <Text ta='center' size='lg' fw={700}>
+                        {activityPercentage}%
+                      </Text>
+                    }
+                  />
+                </Group>
               </Stack>
             </Card>
           </Grid.Col>
 
-          {/* Activity Ring */}
-          <Grid.Col span={{ base: 12, md: 4 }}>
-            <Card withBorder shadow='sm' radius='md' p='lg'>
-              <Group justify='center' mb='md'>
-                <Title order={4}>Activity Level</Title>
-              </Group>
-              <Group justify='center'>
-                <RingProgress
-                  size={120}
-                  thickness={12}
-                  sections={[{ value: activityPercentage, color: theme.colors.blue?.[6] || '#228be6' }]}
-                  label={
-                    <Text ta='center' size='lg' fw={700}>
-                      {activityPercentage}%
-                    </Text>
-                  }
-                />
-              </Group>
-            </Card>
-          </Grid.Col>
-
           {/* Time Period */}
-          <Grid.Col span={{ base: 12, md: 8 }}>
+          <Grid.Col span={{ base: 12, md: 5 }}>
             <Card withBorder shadow='sm' radius='md' p='lg'>
               <Group justify='space-between' mb='md'>
                 <Title order={4}>Time Period</Title>
@@ -288,6 +352,106 @@ export function UserStats({ messages }: UserStatsProps) {
                   </Text>
                   <Badge variant='light' color='purple'>
                     {userStats.mostActiveDay}
+                  </Badge>
+                </Group>
+                <Group justify='space-between'>
+                  <Text size='sm' c='dimmed'>
+                    Quietest Hour
+                  </Text>
+                  <Badge variant='light' color='red'>
+                    {userStats.mostQuietHour}:00
+                  </Badge>
+                </Group>
+                <Group justify='space-between'>
+                  <Text size='sm' c='dimmed'>
+                    Quietest Day
+                  </Text>
+                  <Badge variant='light' color='red'>
+                    {userStats.mostQuietDay}
+                  </Badge>
+                </Group>
+                <Group justify='space-between'>
+                  <Text size='sm' c='dimmed'>
+                    Most Active Day (by Date)
+                  </Text>
+                  <Badge variant='light' color='purple'>
+                    {userStats.mostActiveDayByDate}
+                  </Badge>
+                </Group>
+                <Group justify='space-between'>
+                  <Text size='sm' c='dimmed'>
+                    Most Active Month
+                  </Text>
+                  <Badge variant='light' color='purple'>
+                    {userStats.mostActiveMonth}
+                  </Badge>
+                </Group>
+                <Group justify='space-between'>
+                  <Text size='sm' c='dimmed'>
+                    Most Quiet Month
+                  </Text>
+                  <Badge variant='light' color='red'>
+                    {userStats.mostQuietMonth}
+                  </Badge>
+                </Group>
+                <Group justify='space-between'>
+                  <Text size='sm' c='dimmed'>
+                    Most Active Year
+                  </Text>
+                  <Badge variant='light' color='purple'>
+                    {userStats.mostActiveYear}
+                  </Badge>
+                </Group>
+                <Group justify='space-between'>
+                  <Text size='sm' c='dimmed'>
+                    Most Quiet Year
+                  </Text>
+                  <Badge variant='light' color='red'>
+                    {userStats.mostQuietYear}
+                  </Badge>
+                </Group>
+              </Stack>
+            </Card>
+          </Grid.Col>
+
+          {/* Content Statistics */}
+          <Grid.Col span={{ base: 12, md: 5 }}>
+            <Card withBorder shadow='sm' radius='md' p='lg'>
+              <Group justify='space-between' mb='md'>
+                <Title order={4}>Content Statistics</Title>
+                <IconMessage size={18} color={theme.colors.orange?.[6] || '#fd7e14'} />
+              </Group>
+              <Stack gap='sm'>
+                <Group justify='space-between'>
+                  <Text size='sm' c='dimmed'>
+                    Total characters
+                  </Text>
+                  <Badge variant='light' color='green'>
+                    {userStats.contentStats.totalCharacters}
+                  </Badge>
+                </Group>
+                <Group justify='space-between'>
+                  <Text size='sm' c='dimmed'>
+                    Average characters per message
+                  </Text>
+                  <Badge variant='light' color='red'>
+                    {userStats.contentStats.averageCharactersPerMessage.toFixed(2)}
+                  </Badge>
+                </Group>
+                <Group justify='space-between'>
+                  <Text size='sm' c='dimmed'>
+                    Longest message
+                  </Text>
+                  <Badge variant='light' color='blue'>
+                    {userStats.contentStats.longestMessage.length} chars
+                  </Badge>
+                </Group>
+                <Group justify='space-between'>
+                  <Text size='sm' c='dimmed'>
+                    Shortest message
+                  </Text>
+                  <Badge variant='light' color='purple'>
+                    {userStats.contentStats.shortestMessage}
                   </Badge>
                 </Group>
               </Stack>

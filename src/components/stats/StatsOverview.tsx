@@ -108,7 +108,7 @@ export function StatsOverview({ stats }: StatsOverviewProps) {
                   Duration
                 </Text>
                 <Text size='xl' fw={700} c='purple'>
-                  {formatDuration(stats.dateRange.duration)}
+                  {formatDuration(+stats.dateRange.duration.toFixed(2))}
                 </Text>
               </Box>
               <IconClock size={32} color={theme.colors.purple?.[6] || theme.colors.gray[6]} />
@@ -141,6 +141,15 @@ export function StatsOverview({ stats }: StatsOverviewProps) {
 
               <Group justify='space-between'>
                 <Text size='sm' c='dimmed'>
+                  Quietest Hour
+                </Text>
+                <Badge color='red' variant='light'>
+                  {getBusiestHourDisplay(stats.funStats.quietestHour)}
+                </Badge>
+              </Group>
+
+              <Group justify='space-between'>
+                <Text size='sm' c='dimmed'>
                   Busiest Day
                 </Text>
                 <Badge color='green' variant='light'>
@@ -150,19 +159,59 @@ export function StatsOverview({ stats }: StatsOverviewProps) {
 
               <Group justify='space-between'>
                 <Text size='sm' c='dimmed'>
-                  Most Active User
+                  Quietest Day
                 </Text>
-                <Badge color='orange' variant='light'>
-                  {stats.funStats.mostActiveUser}
+                <Badge color='red' variant='light'>
+                  {stats.funStats.quietestDay}
                 </Badge>
               </Group>
 
               <Group justify='space-between'>
                 <Text size='sm' c='dimmed'>
-                  Most Valuable User
+                  Busiest Day (by Date)
                 </Text>
-                <Badge color='purple' variant='light'>
-                  {stats.funStats.mostValuableUser}
+                <Badge color='green' variant='light'>
+                  {stats.funStats.busiestDayByDate}
+                </Badge>
+              </Group>
+              <Group justify='space-between'>
+                <Text size='sm' c='dimmed'>
+                  Quietest Day (by Date)
+                </Text>
+                <Badge color='red' variant='light'>
+                  {stats.funStats.quietestDayByDate}
+                </Badge>
+              </Group>
+              <Group justify='space-between'>
+                <Text size='sm' c='dimmed'>
+                  Busiest Month
+                </Text>
+                <Badge color='green' variant='light'>
+                  {stats.funStats.busiestMonth}
+                </Badge>
+              </Group>
+              <Group justify='space-between'>
+                <Text size='sm' c='dimmed'>
+                  Quietest Month
+                </Text>
+                <Badge color='red' variant='light'>
+                  {stats.funStats.quietestMonth}
+                </Badge>
+              </Group>
+              <Group justify='space-between'>
+                <Text size='sm' c='dimmed'>
+                  Busiest Year
+                </Text>
+                <Badge color='green' variant='light'>
+                  {stats.funStats.busiestYear}
+                </Badge>
+              </Group>
+              <Group justify='space-between'>
+                <Text size='sm' c='dimmed'>
+                  Quietest Year
+                </Text>
+                <Badge color='red' variant='light'>
+                  {stats.funStats.quietestYear}
                 </Badge>
               </Group>
             </Stack>
@@ -170,44 +219,75 @@ export function StatsOverview({ stats }: StatsOverviewProps) {
         </Grid.Col>
 
         <Grid.Col span={{ base: 12, md: 6 }}>
-          <Card withBorder shadow='sm' radius='md' p='lg'>
-            <Group justify='space-between' mb='lg'>
-              <Text fw={600} size='lg'>
-                Content Stats
-              </Text>
-              <IconTrendingUp size={20} color={theme.colors.green[6]} />
-            </Group>
-
-            <Stack gap='md'>
-              <Group justify='space-between'>
-                <Text size='sm' c='dimmed'>
-                  Total Characters
+          <Stack>
+            <Card withBorder shadow='sm' radius='md' p='lg'>
+              <Group justify='space-between' mb='lg'>
+                <Text fw={600} size='lg'>
+                  Content Stats
                 </Text>
-                <Text fw={600}>{formatNumber(stats.contentStats.totalCharacters)}</Text>
+                <IconTrendingUp size={20} color={theme.colors.green[6]} />
               </Group>
 
-              <Group justify='space-between'>
-                <Text size='sm' c='dimmed'>
-                  Avg Characters/Message
+              <Stack gap='md'>
+                <Group justify='space-between'>
+                  <Text size='sm' c='dimmed'>
+                    Total Characters
+                  </Text>
+                  <Text fw={600}>{formatNumber(stats.contentStats.totalCharacters)}</Text>
+                </Group>
+
+                <Group justify='space-between'>
+                  <Text size='sm' c='dimmed'>
+                    Avg Characters/Message
+                  </Text>
+                  <Text fw={600}>{Math.round(stats.contentStats.averageCharactersPerMessage)}</Text>
+                </Group>
+
+                <Group justify='space-between'>
+                  <Text size='sm' c='dimmed'>
+                    Total Words
+                  </Text>
+                  <Text fw={600}>{formatNumber(stats.contentStats.totalWords)}</Text>
+                </Group>
+
+                <Group justify='space-between'>
+                  <Text size='sm' c='dimmed'>
+                    Avg Words/Message
+                  </Text>
+                  <Text fw={600}>{Math.round(stats.contentStats.averageWordsPerMessage)}</Text>
+                </Group>
+              </Stack>
+            </Card>
+
+            <Card withBorder shadow='sm' radius='md' p='lg'>
+              <Group justify='space-between' mb='lg'>
+                <Text fw={600} size='lg'>
+                  User Activity Information
                 </Text>
-                <Text fw={600}>{Math.round(stats.contentStats.averageCharactersPerMessage)}</Text>
+                <IconUsers size={20} color={theme.colors.blue[6]} />
               </Group>
 
-              <Group justify='space-between'>
-                <Text size='sm' c='dimmed'>
-                  Total Words
-                </Text>
-                <Text fw={600}>{formatNumber(stats.contentStats.totalWords)}</Text>
-              </Group>
+              <Stack gap='md'>
+                <Group justify='space-between'>
+                  <Text size='sm' c='dimmed'>
+                    Most Active User
+                  </Text>
+                  <Badge color='orange' variant='light'>
+                    {stats.funStats.mostActiveUser}
+                  </Badge>
+                </Group>
 
-              <Group justify='space-between'>
-                <Text size='sm' c='dimmed'>
-                  Avg Words/Message
-                </Text>
-                <Text fw={600}>{Math.round(stats.contentStats.averageWordsPerMessage)}</Text>
-              </Group>
-            </Stack>
-          </Card>
+                <Group justify='space-between'>
+                  <Text size='sm' c='dimmed'>
+                    Most Valuable User
+                  </Text>
+                  <Badge color='purple' variant='light'>
+                    {stats.funStats.mostValuableUser}
+                  </Badge>
+                </Group>
+              </Stack>
+            </Card>
+          </Stack>
         </Grid.Col>
       </Grid>
 

@@ -16,7 +16,7 @@ const RANKING_TYPES: {
   color: string;
 }[] = [
   { value: 'message_count', label: 'Message Count', icon: IconUsers, color: 'blue' },
-  { value: 'message_points', label: 'Message Points', icon: IconTrophy, color: 'gold' },
+  { value: 'message_points', label: 'Message Points', icon: IconTrophy, color: 'orange' },
   { value: 'activity_score', label: 'Activity Score', icon: IconActivity, color: 'green' },
 ];
 

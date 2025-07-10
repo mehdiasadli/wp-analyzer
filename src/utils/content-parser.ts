@@ -233,19 +233,14 @@ export function getCallInfo(content: string | null): CallInfo | null {
 function parsePoll(content: string | null): PollInfo | null {
   if (content === null) return null;
 
-  // Debug logging to see the actual content
-  console.log('Parsing poll content:', content);
-
   // Check if content starts with POLL:
   if (!content.startsWith('POLL:')) {
-    console.log('Content does not start with POLL:');
     return null;
   }
 
   // Extract the question - everything after POLL: until the first OPTION:
   const questionMatch = content.match(/POLL:\s*\n?([^\n]+)/);
   if (!questionMatch || !questionMatch[1]) {
-    console.log('Could not extract question');
     return null;
   }
 
@@ -265,11 +260,8 @@ function parsePoll(content: string | null): PollInfo | null {
     }
   }
 
-  console.log('Parsed poll:', { question, options });
-
   // Return null if no options found
   if (options.length === 0) {
-    console.log('No options found in poll');
     return null;
   }
 

@@ -55,6 +55,14 @@ export type UserStats = {
   currentStreak: number;
   mostActiveHour: number;
   mostActiveDay: string;
+  mostActiveDayByDate: string;
+  mostActiveMonth: string;
+  mostActiveYear: string;
+  mostQuietHour: number;
+  mostQuietDay: string;
+  mostQuietDayByDate: string;
+  mostQuietMonth: string;
+  mostQuietYear: string;
   hourlyActivity: Record<number, number>;
   dailyActivity: Record<string, number>; // days of week
   dailyActivityByDate: Record<string, number>; // actual dates
@@ -119,8 +127,14 @@ export type OverallStats = {
   funStats: {
     busiestHour: number;
     busiestDay: string;
+    busiestDayByDate: string;
+    busiestMonth: string;
+    busiestYear: string;
     quietestHour: number;
     quietestDay: string;
+    quietestDayByDate: string;
+    quietestMonth: string;
+    quietestYear: string;
     mostActiveUser: string;
     mostValuableUser: string;
     longestMessage: { author: string; content: string; length: number };
@@ -370,11 +384,25 @@ class Stats {
         return h1 > h2 ? a : b;
       })[0] || '0';
 
+    const mostQuietHour =
+      Object.entries(hourlyActivity).reduce((a, b) => {
+        const h1 = hourlyActivity[Number(a[0])] || 0;
+        const h2 = hourlyActivity[Number(b[0])] || 0;
+        return h1 < h2 ? a : b;
+      })[0] || '0';
+
     const mostActiveDay =
       Object.entries(dailyActivity).reduce((a, b) => {
         const d1 = dailyActivity[a[0]] || 0;
         const d2 = dailyActivity[b[0]] || 0;
         return d1 > d2 ? a : b;
+      })[0] || 'Monday';
+
+    const mostQuietDay =
+      Object.entries(dailyActivity).reduce((a, b) => {
+        const d1 = dailyActivity[a[0]] || 0;
+        const d2 = dailyActivity[b[0]] || 0;
+        return d1 < d2 ? a : b;
       })[0] || 'Monday';
 
     // Daily activity by date
@@ -402,6 +430,49 @@ class Stats {
       yearlyActivity[year] = (yearlyActivity[year] || 0) + 1;
     });
 
+    // Calculate busiest and quietest for day by date, month, and year
+    const mostActiveDayByDate =
+      Object.entries(dailyActivityByDate).reduce((a, b) => {
+        const d1 = dailyActivityByDate[a[0]] || 0;
+        const d2 = dailyActivityByDate[b[0]] || 0;
+        return d1 > d2 ? a : b;
+      })[0] || '';
+
+    const mostQuietDayByDate =
+      Object.entries(dailyActivityByDate).reduce((a, b) => {
+        const d1 = dailyActivityByDate[a[0]] || 0;
+        const d2 = dailyActivityByDate[b[0]] || 0;
+        return d1 < d2 ? a : b;
+      })[0] || '';
+
+    const mostActiveMonth =
+      Object.entries(monthlyActivity).reduce((a, b) => {
+        const m1 = monthlyActivity[a[0]] || 0;
+        const m2 = monthlyActivity[b[0]] || 0;
+        return m1 > m2 ? a : b;
+      })[0] || '';
+
+    const mostQuietMonth =
+      Object.entries(monthlyActivity).reduce((a, b) => {
+        const m1 = monthlyActivity[a[0]] || 0;
+        const m2 = monthlyActivity[b[0]] || 0;
+        return m1 < m2 ? a : b;
+      })[0] || '';
+
+    const mostActiveYear =
+      Object.entries(yearlyActivity).reduce((a, b) => {
+        const y1 = yearlyActivity[a[0]] || 0;
+        const y2 = yearlyActivity[b[0]] || 0;
+        return y1 > y2 ? a : b;
+      })[0] || '';
+
+    const mostQuietYear =
+      Object.entries(yearlyActivity).reduce((a, b) => {
+        const y1 = yearlyActivity[a[0]] || 0;
+        const y2 = yearlyActivity[b[0]] || 0;
+        return y1 < y2 ? a : b;
+      })[0] || '';
+
     const activityConfig = config.activityScoreConfig || this.defaultActivityConfig;
     const activityScore = this.calculateActivityScore(userMessages, activityConfig);
 
@@ -421,6 +492,14 @@ class Stats {
       currentStreak,
       mostActiveHour: parseInt(mostActiveHour),
       mostActiveDay,
+      mostActiveDayByDate,
+      mostActiveMonth,
+      mostActiveYear,
+      mostQuietHour: parseInt(mostQuietHour),
+      mostQuietDay,
+      mostQuietDayByDate,
+      mostQuietMonth,
+      mostQuietYear,
       hourlyActivity,
       dailyActivity,
       dailyActivityByDate,
@@ -655,6 +734,12 @@ class Stats {
         }
       }
 
+      // Debug logs for activity maps
+      // Remove or comment out after verifying
+      // console.log('dailyActivityByDate', dailyActivityByDate);
+      // console.log('monthlyActivity', monthlyActivity);
+      // console.log('yearlyActivity', yearlyActivity);
+
       // Calculate distributions
       const messageTypeDistribution = Object.entries(messageTypeCounts).reduce(
         (acc, [type, count]) => {
@@ -708,6 +793,49 @@ class Stats {
           const d2 = dailyActivity[b[0]] || 0;
           return d1 < d2 ? a : b;
         })[0] || 'Sunday';
+
+      // Calculate busiest and quietest for day by date, month, and year
+      const busiestDayByDate =
+        Object.entries(dailyActivityByDate).reduce((a, b) => {
+          const d1 = dailyActivityByDate[a[0]] || 0;
+          const d2 = dailyActivityByDate[b[0]] || 0;
+          return d1 > d2 ? a : b;
+        })[0] || '';
+
+      const quietestDayByDate =
+        Object.entries(dailyActivityByDate).reduce((a, b) => {
+          const d1 = dailyActivityByDate[a[0]] || 0;
+          const d2 = dailyActivityByDate[b[0]] || 0;
+          return d1 < d2 ? a : b;
+        })[0] || '';
+
+      const busiestMonth =
+        Object.entries(monthlyActivity).reduce((a, b) => {
+          const m1 = monthlyActivity[a[0]] || 0;
+          const m2 = monthlyActivity[b[0]] || 0;
+          return m1 > m2 ? a : b;
+        })[0] || '';
+
+      const quietestMonth =
+        Object.entries(monthlyActivity).reduce((a, b) => {
+          const m1 = monthlyActivity[a[0]] || 0;
+          const m2 = monthlyActivity[b[0]] || 0;
+          return m1 < m2 ? a : b;
+        })[0] || '';
+
+      const busiestYear =
+        Object.entries(yearlyActivity).reduce((a, b) => {
+          const y1 = yearlyActivity[a[0]] || 0;
+          const y2 = yearlyActivity[b[0]] || 0;
+          return y1 > y2 ? a : b;
+        })[0] || '';
+
+      const quietestYear =
+        Object.entries(yearlyActivity).reduce((a, b) => {
+          const y1 = yearlyActivity[a[0]] || 0;
+          const y2 = yearlyActivity[b[0]] || 0;
+          return y1 < y2 ? a : b;
+        })[0] || '';
 
       const rankings = this.getRankings({ ...config, rankingType: 'message_count' });
       const mostActiveUser = rankings[0]?.author || '';
@@ -774,8 +902,14 @@ class Stats {
         funStats: {
           busiestHour: parseInt(busiestHour),
           busiestDay,
+          busiestDayByDate,
+          busiestMonth,
+          busiestYear,
           quietestHour: parseInt(quietestHour),
           quietestDay,
+          quietestDayByDate,
+          quietestMonth,
+          quietestYear,
           mostActiveUser,
           mostValuableUser,
           longestMessage,
